@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const spaceRoutes = require('./routes/spaceRoutes');
 
 // Load the secret variables from the .env file
 dotenv.config();
@@ -21,6 +22,9 @@ app.get('/', (req, res) => {
   res.send('Warehouse SaaS API is running...');
 });
 
+app.use('/api/users', require('./routes/userRoutes'));
+
+app.use('/api/spaces', spaceRoutes);
 // Define the port (use the one from .env, or default to 5000)
 const PORT = process.env.PORT || 5000;
 
