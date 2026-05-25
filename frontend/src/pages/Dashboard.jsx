@@ -21,7 +21,7 @@ const Dashboard = () => {
         const token = localStorage.getItem('token');
         
         // Act like Postman: Send a GET request AND attach the Authorization Header
-        const response = await axios.get('http://localhost:5000/api/spaces', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

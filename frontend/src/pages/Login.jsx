@@ -18,7 +18,7 @@ const Login = () => {
 
     try {
       // Act just like Postman: Send a POST request to our API
-      const response = await axios.post('http://localhost:5000/api/users/login', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/login`, {
         email,
         password,
       });
@@ -39,37 +39,53 @@ const Login = () => {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', fontFamily: 'sans-serif' }}>
-      <h2>Sign in to Warehouse SaaS</h2>
-      
-      {/* If there is an error, show this red box */}
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans px-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+        
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
+          Sign in to Warehouse SaaS
+        </h2>
+        
+        {/* If there is an error, show this red box */}
+        {error && (
+          <div className="bg-red-50 text-red-600 text-sm p-3 rounded-md mb-6 text-center border border-red-100">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        
-        <input 
-          type="email" 
-          placeholder="Email Address" 
-          value={email}
-          onChange={(e) => setEmail(e.target.value)} // Update memory as they type
-          required
-          style={{ padding: '10px' }}
-        />
-        
-        <input 
-          type="password" 
-          placeholder="Password" 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)} // Update memory as they type
-          required
-          style={{ padding: '10px' }}
-        />
-        
-        <button type="submit" style={{ padding: '10px', background: 'blue', color: 'white', border: 'none', cursor: 'pointer' }}>
-          Login
-        </button>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          
+          <div>
+            <input 
+              type="email" 
+              placeholder="Email Address" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)} 
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+          
+          <div>
+            <input 
+              type="password" 
+              placeholder="Password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)} 
+              required
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+          
+          <button 
+            type="submit" 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors duration-200 mt-2 shadow-sm"
+          >
+            Login
+          </button>
 
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
