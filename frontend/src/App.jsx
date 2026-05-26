@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Marketplace from './pages/Marketplace';
+import Register from './pages/Register';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Navigate to="/marketplace" replace />} />
           
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           
           <Route 
             path="/dashboard" 

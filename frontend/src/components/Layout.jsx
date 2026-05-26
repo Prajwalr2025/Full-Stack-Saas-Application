@@ -7,12 +7,14 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem('token');
+  const userRole = localStorage.getItem('userRole');
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
     toast.success('Successfully logged out!');
-    navigate('/');
+    navigate('/marketplace');
   };
 
   return (
@@ -37,16 +39,16 @@ const Layout = ({ children }) => {
             Marketplace
           </Link>
 
-          {/* Protected Dashboard Link (Only shows if logged in) */}
-          {token && (
-            <Link 
-              to="/dashboard" 
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              Owner Dashboard
-            </Link>
-          )}
+          {/* Protected Dashboard Link (Only shows if logged in AND is an owner) */}
+       {token && userRole === 'owner' && (
+         <Link 
+           to="/dashboard" 
+           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+         >
+           <LayoutDashboard className="w-5 h-5" />
+           Owner Dashboard
+         </Link>
+       )}
         </nav>
 
         {/* Auth Buttons (Bottom of Sidebar) */}
