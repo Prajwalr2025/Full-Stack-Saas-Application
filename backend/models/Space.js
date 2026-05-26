@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
 const spaceSchema = new mongoose.Schema({
-  owner: {
+  // Changed "owner" to "user" so it perfectly matches your controller
+  user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // This links the warehouse directly to the User who owns it
+    ref: 'User', 
     required: true
   },
   title: { type: String, required: true },

@@ -19,7 +19,8 @@ const createSpace = async (req, res) => {
       title,
       location,
       squareFootage,
-      basePricePerDay
+      basePricePerDay,
+      user: req.user.id,
     });
 
     res.status(201).json(newSpace);
@@ -43,8 +44,23 @@ const getSpaces = async (req, res) => {
   }
 };
 
+// @desc    Get logged in owner's spaces
+// @route   GET /api/spaces/me
+// @access  Private
+const getOwnerSpaces = async (req, res) => {
+  try {
+    // This looks for spaces where the 'user' field matches the token's ID
+    const spaces = await Space.find({ user: req.user.id });
+    res.status(200).json(spaces);
+  } catch (error) {
+    res.status(500);
+    throw new Error('Failed to fetch your spaces');
+  }
+};
+
 // Export the functions so our routes can use them
 module.exports = {
   createSpace,
-  getSpaces
+  getSpaces,
+  getOwnerSpaces
 };
