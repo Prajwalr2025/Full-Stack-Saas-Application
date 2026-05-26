@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
+import Marketplace from './pages/Marketplace';
 
 function App() {
   return (
@@ -29,7 +30,7 @@ function App() {
           />
           
           {/* We will build this page in the next step! */}
-          <Route path="/marketplace" element={<div>Marketplace coming soon...</div>} />
+          <Route path="/marketplace" element={<Marketplace />} />
         </Routes>
       </Layout>
     </Router>
