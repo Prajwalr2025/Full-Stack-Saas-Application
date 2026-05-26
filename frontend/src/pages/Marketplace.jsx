@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, MapPin, Maximize, ShieldCheck,Store } from 'lucide-react';
+import { Search, MapPin, Maximize, ShieldCheck, Store } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Marketplace = () => {
@@ -33,26 +33,27 @@ const Marketplace = () => {
     <div className="min-h-screen bg-gray-50 pb-12">
       
       {/* Premium Hero Section */}
-      <div className="bg-blue-900 text-white py-16 px-6 text-center">
+      <div className="bg-black text-white py-16 px-6 text-center">
         <h1 className="text-4xl font-bold mb-4">Find the Perfect Warehouse Space</h1>
         <p className="text-blue-200 text-lg max-w-2xl mx-auto mb-8">
           Browse premium industrial real estate. Connect directly with owners. No hidden fees.
         </p>
         
         {/* Search Bar */}
-        <div className="max-w-xl mx-auto relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+        <div className="max-w-xl mx-auto relative group">
+          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+            {/* The icon will turn blue when the user clicks the search bar! */}
+            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-400 transition-colors duration-300" />
           </div>
           <input
             type="text"
             placeholder="Search by city, zone, or warehouse name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 rounded-xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-lg"
+            className="w-full pl-14 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 backdrop-blur-md focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 shadow-2xl"
           />
         </div>
-      </div>
+      </div> {/* <--- THIS IS THE MISSING CLOSING TAG THAT FIXED THE ERROR */}
 
       {/* Main Grid */}
       <div className="max-w-6xl mx-auto px-6 mt-12">
