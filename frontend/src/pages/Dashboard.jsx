@@ -49,12 +49,6 @@ const Dashboard = () => {
     <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>Welcome back, {userName}</h2>
-        <button 
-          onClick={handleLogout}
-          style={{ padding: '8px 16px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Logout
-        </button>
       </div>
 
       <hr style={{ margin: '20px 0' }} />
