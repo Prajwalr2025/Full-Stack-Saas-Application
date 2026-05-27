@@ -11,6 +11,10 @@ const spaceSchema = new mongoose.Schema({
   location: { type: String, required: true },
   squareFootage: { type: Number, required: true },
   basePricePerDay: { type: Number, required: true },
+  imageUrl: { 
+    type: String, 
+    default: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=800&auto=format&fit=crop' // A nice default warehouse image just in case
+  },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 

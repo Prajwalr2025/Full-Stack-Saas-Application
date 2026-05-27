@@ -6,7 +6,7 @@ const Space = require('../models/Space');
 const createSpace = async (req, res) => {
   try {
     // 1. We no longer extract 'owner' from req.body. We only take the warehouse details.
-    const { title, location, squareFootage, basePricePerDay } = req.body;
+    const { title, location, squareFootage, basePricePerDay, imageUrl } = req.body;
 
     if (!title || !location || !squareFootage || !basePricePerDay) {
       return res.status(400).json({ message: 'Please provide all required fields' });
@@ -20,6 +20,7 @@ const createSpace = async (req, res) => {
       location,
       squareFootage,
       basePricePerDay,
+      imageUrl,
       user: req.user.id,
     });
 
