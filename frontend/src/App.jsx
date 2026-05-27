@@ -6,6 +6,8 @@ import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Marketplace from './pages/Marketplace';
 import Register from './pages/Register';
+import RenterApplications from './pages/RenterApplications';
+import OwnerRequests from './pages/OwnerRequests';
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
           
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/applications" element={<RenterApplications />} />
+          <Route path="/requests" element={<OwnerRequests />} />
           
           <Route 
             path="/dashboard" 

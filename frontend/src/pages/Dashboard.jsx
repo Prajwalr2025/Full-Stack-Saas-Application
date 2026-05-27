@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, X, MapPin, Maximize, Store } from 'lucide-react';
+import { Plus, X, MapPin, Maximize, Store, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // State to control whether the form is open or closed
   const [showForm, setShowForm] = useState(false);
 
-  // Form input states
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [squareFootage, setSquareFootage] = useState('');
   const [basePricePerDay, setBasePricePerDay] = useState('');
+  
+  // NEW: State for our image uploading process
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const token = localStorage.getItem('token');
   const userName = localStorage.getItem('userName');
@@ -23,9 +24,7 @@ const Dashboard = () => {
     const fetchSpaces = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
         setSpaces(response.data);
       } catch (err) {
@@ -37,7 +36,30 @@ const Dashboard = () => {
     fetchSpaces();
   }, [token]);
 
-  // The function that talks to your secure POST route
+  // NEW: The function that handles the file selection and upload to AWS
+  const uploadFileHandler = async (e) => {
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('image', file); // 'image' matches exactly what Multer is looking for
+    setUploading(true);
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`
+        }
+      });
+      // AWS successfully stored it, save the URL to our React state!
+      setImageUrl(response.data.imageUrl);
+      toast.success('Image uploaded successfully!');
+    } catch (err) {
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleCreateSpace = async (e) => {
     e.preventDefault();
     try {
@@ -47,26 +69,22 @@ const Dashboard = () => {
           title,
           location,
           squareFootage: Number(squareFootage),
-          basePricePerDay: Number(basePricePerDay)
+          basePricePerDay: Number(basePricePerDay),
+          imageUrl // Send the AWS URL to the database!
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}` // Showing the VIP pass to the backend
-          }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Instantly add the new space to the top of our list
       setSpaces([response.data, ...spaces]);
       toast.success('Warehouse listed successfully!');
 
-      // Reset the form and close it
+      // Reset the form
       setTitle('');
       setLocation('');
       setSquareFootage('');
       setBasePricePerDay('');
+      setImageUrl('');
       setShowForm(false);
-      
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create listing');
     }
@@ -75,7 +93,6 @@ const Dashboard = () => {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       
-      {/* Header Section */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Welcome, {userName}</h1>
@@ -90,12 +107,32 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Conditionally Rendered Creation Form */}
       {showForm && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8 animate-in slide-in-from-top-4 fade-in duration-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">Create a New Listing</h2>
           <form onSubmit={handleCreateSpace} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
+            {/* NEW: Image Upload Section */}
+            <div className="md:col-span-2 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-100 transition-colors">
+              {imageUrl ? (
+                <div className="relative w-full h-48 rounded-lg overflow-hidden">
+                  <img src={imageUrl} alt="Warehouse preview" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => setImageUrl('')} className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full hover:bg-red-700">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <UploadCloud className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                  <label className="cursor-pointer text-blue-600 hover:text-blue-700 font-medium">
+                    {uploading ? 'Uploading to AWS...' : 'Click to upload property image'}
+                    <input type="file" className="hidden" onChange={uploadFileHandler} accept="image/*" disabled={uploading} />
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">PNG, JPG, WEBP up to 5MB</p>
+                </>
+              )}
+            </div>
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Property Title</label>
               <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Peenya Industrial Hub - Zone A" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" />
@@ -137,22 +174,34 @@ const Dashboard = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {spaces.map((space) => (
-            <div key={space._id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{space.title}</h3>
-                <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded border border-green-200">Active</span>
+            <div key={space._id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
+              
+              {/* NEW: Render the image! */}
+              <div className="h-48 bg-gray-200 relative">
+                {space.imageUrl ? (
+                  <img src={space.imageUrl} alt={space.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-gray-400">
+                    <ImageIcon className="w-10 h-10" />
+                  </div>
+                )}
+                <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">Active</span>
               </div>
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-gray-600 text-sm">
-                  <MapPin className="w-4 h-4 mr-2" /> {space.location}
+              
+              <div className="p-5 flex-1 flex flex-col">
+                <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-3">{space.title}</h3>
+                <div className="space-y-2 mb-4 flex-1">
+                  <div className="flex items-center text-gray-600 text-sm">
+                    <MapPin className="w-4 h-4 mr-2" /> {space.location}
+                  </div>
+                  <div className="flex items-center text-gray-600 text-sm">
+                    <Maximize className="w-4 h-4 mr-2" /> {space.squareFootage.toLocaleString()} sq ft
+                  </div>
                 </div>
-                <div className="flex items-center text-gray-600 text-sm">
-                  <Maximize className="w-4 h-4 mr-2" /> {space.squareFootage.toLocaleString()} sq ft
+                <div className="pt-4 border-t border-gray-100 flex justify-between items-end mt-auto">
+                  <span className="text-xs text-gray-500">Daily Rate</span>
+                  <span className="text-lg font-bold text-blue-700">₹{space.basePricePerDay.toLocaleString()}</span>
                 </div>
-              </div>
-              <div className="pt-4 border-t border-gray-100 flex justify-between items-end">
-                <span className="text-xs text-gray-500">Daily Rate</span>
-                <span className="text-lg font-bold text-blue-700">₹{space.basePricePerDay.toLocaleString()}</span>
               </div>
             </div>
           ))}

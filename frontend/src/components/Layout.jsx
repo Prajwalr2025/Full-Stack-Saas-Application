@@ -1,7 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Store, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { Store, LayoutDashboard, LogOut, LogIn, Inbox, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
-
 
 const Layout = ({ children }) => {
   const navigate = useNavigate();
@@ -39,16 +38,36 @@ const Layout = ({ children }) => {
             Marketplace
           </Link>
 
-          {/* Protected Dashboard Link (Only shows if logged in AND is an owner) */}
-       {token && userRole === 'owner' && (
-         <Link 
-           to="/dashboard" 
-           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-         >
-           <LayoutDashboard className="w-5 h-5" />
-           Owner Dashboard
-         </Link>
-       )}
+          {/* Owner Only Links */}
+          {token && userRole === 'owner' && (
+            <>
+              <Link 
+                to="/dashboard" 
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/dashboard' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                My Warehouses
+              </Link>
+              <Link 
+                to="/requests" 
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/requests' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                <Inbox className="w-5 h-5" />
+                Incoming Requests
+              </Link>
+            </>
+          )}
+
+          {/* Renter Only Links */}
+          {token && userRole === 'renter' && (
+            <Link 
+              to="/applications" 
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/applications' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              <ClipboardList className="w-5 h-5" />
+              My Applications
+            </Link>
+          )}
         </nav>
 
         {/* Auth Buttons (Bottom of Sidebar) */}
