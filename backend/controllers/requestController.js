@@ -5,27 +5,25 @@ const Space = require('../models/Space');
 // @route   POST /api/requests
 // @access  Private (Renters only)
 const createRequest = async (req, res) => {
-  const { spaceId, startDate, endDate, totalPrice, renterNotes } = req.body;
+  // We now accept a 'proposedPrice' from the frontend
+  const { spaceId, startDate, endDate, totalPrice, proposedPrice, renterNotes } = req.body;
 
   try {
-    // 1. Find the space to figure out who the owner is
     const space = await Space.findById(spaceId);
     
     if (!space) {
       return res.status(404).json({ message: 'Warehouse not found' });
     }
 
-    // 2. Create the request, linking everyone together
-    // Inside createRequest, update the Request.create block:
     const request = await Request.create({
       space: spaceId,
       renter: req.user.id,
-      owner: space.user,
+      owner: space.user, 
       startDate,
       endDate,
-      totalPrice,
-      negotiatedPrice: totalPrice, // Starts at the original price
-      actionRequiredBy: 'owner',   // The owner has to respond first
+      totalPrice, // The mathematical original price
+      negotiatedPrice: proposedPrice || totalPrice, // The Renter's opening bid
+      actionRequiredBy: 'owner', 
       renterNotes
     });
 
@@ -63,9 +61,6 @@ const getOwnerRequests = async (req, res) => {
   }
 };
 
-// @desc    Update request status (Approve/Reject)
-// @route   PUT /api/requests/:id/status
-// @access  Private (Owner only)
 // @desc    Update request status (Approve/Reject/Negotiate)
 // @route   PUT /api/requests/:id/status
 // @access  Private (Owner or Renter)
@@ -107,8 +102,12 @@ const updateRequestStatus = async (req, res) => {
     // 4. Handle Final Decisions (Approve/Reject)
     else if (['Approved', 'Rejected'].includes(status)) {
       request.status = status;
-      // Once a final decision is made, the negotiation is over. No action required.
       request.actionRequiredBy = null; 
+      
+      // NEW: If the lease is approved, take the warehouse off the market!
+      if (status === 'Approved') {
+        await Space.findByIdAndUpdate(request.space, { isActive: false });
+      }
     } else {
       return res.status(400).json({ message: 'Invalid status' });
     }
@@ -120,6 +119,7 @@ const updateRequestStatus = async (req, res) => {
     res.status(500).json({ message: 'Failed to update status' });
   }
 };
+
 module.exports = {
   createRequest,
   getRenterRequests,
