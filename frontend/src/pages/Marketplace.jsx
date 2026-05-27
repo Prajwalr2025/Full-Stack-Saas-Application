@@ -8,13 +8,15 @@ const Marketplace = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // NEW: State for the Leasing Modal
   const [selectedSpace, setSelectedSpace] = useState(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [renterNotes, setRenterNotes] = useState('');
+  
+  // NEW: State to track the Renter's custom opening bid
+  const [proposedPrice, setProposedPrice] = useState('');
 
-  const token = localStorage.getItem('token'); // We need the token to submit a request!
+  const token = localStorage.getItem('token'); 
 
   useEffect(() => {
     const fetchPublicSpaces = async () => {
@@ -31,11 +33,11 @@ const Marketplace = () => {
   }, []);
 
   const filteredSpaces = spaces.filter(space => 
-    space.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    space.title.toLowerCase().includes(searchTerm.toLowerCase())
+    space.isActive !== false && // NEW: Only show it if it hasn't been leased!
+    (space.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    space.title.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // NEW: Helper function to calculate total price based on dates
   const calculateTotal = () => {
     if (!startDate || !endDate || !selectedSpace) return 0;
     const start = new Date(startDate);
@@ -46,7 +48,6 @@ const Marketplace = () => {
     return days * selectedSpace.basePricePerDay;
   };
 
-  // NEW: Submit the lease request to the backend
   const handleLeaseSubmit = async (e) => {
     e.preventDefault();
     if (!token) {
@@ -60,6 +61,9 @@ const Marketplace = () => {
       return;
     }
 
+    // NEW: If they didn't type a custom offer, default to the total price
+    const finalOfferPrice = proposedPrice ? Number(proposedPrice) : totalPrice;
+
     try {
       await axios.post(
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/requests`,
@@ -68,6 +72,7 @@ const Marketplace = () => {
           startDate,
           endDate,
           totalPrice,
+          proposedPrice: finalOfferPrice, // Send the opening bid to the backend!
           renterNotes
         },
         {
@@ -77,11 +82,11 @@ const Marketplace = () => {
 
       toast.success('Lease request sent to the owner!');
       
-      // Close and reset the modal
       setSelectedSpace(null);
       setStartDate('');
       setEndDate('');
       setRenterNotes('');
+      setProposedPrice(''); // Reset the offer field
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit request');
     }
@@ -90,14 +95,12 @@ const Marketplace = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-12 relative">
       
-      {/* Premium Hero Section */}
       <div className="bg-black text-white py-16 px-6 text-center">
         <h1 className="text-4xl font-bold mb-4">Find the Perfect Warehouse Space</h1>
         <p className="text-blue-200 text-lg max-w-2xl mx-auto mb-8">
           Browse premium industrial real estate. Connect directly with owners. No hidden fees.
         </p>
         
-        {/* Search Bar */}
         <div className="max-w-xl mx-auto relative group">
           <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400 group-focus-within:text-blue-400 transition-colors duration-300" />
@@ -112,7 +115,6 @@ const Marketplace = () => {
         </div>
       </div>
 
-      {/* Main Grid */}
       <div className="max-w-6xl mx-auto px-6 mt-12">
         {loading ? (
           <div className="text-center text-gray-500 py-20">Loading available properties...</div>
@@ -125,14 +127,9 @@ const Marketplace = () => {
             {filteredSpaces.map((space) => (
               <div key={space._id} className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:shadow-xl transition-shadow duration-300 flex flex-col">
                 
-                {/* Dynamic Image Section */}
                 <div className="h-48 bg-gray-200 relative overflow-hidden border-b border-gray-100">
                   {space.imageUrl ? (
-                    <img 
-                      src={space.imageUrl} 
-                      alt={space.title} 
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
-                    />
+                    <img src={space.imageUrl} alt={space.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <div className="flex items-center justify-center w-full h-full">
                       <Store className="w-12 h-12 text-gray-400" />
@@ -141,7 +138,6 @@ const Marketplace = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
                 </div>
                 
-                {/* Card Body */}
                 <div className="p-6 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{space.title}</h3>
@@ -167,7 +163,6 @@ const Marketplace = () => {
                       <p className="text-sm text-gray-500">Starting at</p>
                       <p className="text-xl font-bold text-blue-700">₹{space.basePricePerDay.toLocaleString()}<span className="text-sm font-normal text-gray-500">/day</span></p>
                     </div>
-                    {/* NEW: Button opens the modal instead of showing a toast */}
                     <button 
                       onClick={() => setSelectedSpace(space)}
                       className="bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -183,20 +178,17 @@ const Marketplace = () => {
         )}
       </div>
 
-      {/* NEW: The Lease Request Modal (Only renders if a space is selected) */}
       {selectedSpace && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             
-            {/* Modal Header */}
             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-lg font-bold text-gray-900">Request Lease</h3>
-              <button onClick={() => setSelectedSpace(null)} className="text-gray-400 hover:text-gray-700 transition-colors">
+              <button onClick={() => { setSelectedSpace(null); setProposedPrice(''); }} className="text-gray-400 hover:text-gray-700 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleLeaseSubmit} className="p-6">
               <div className="mb-6 pb-4 border-b border-gray-100">
                 <h4 className="font-bold text-gray-800">{selectedSpace.title}</h4>
@@ -222,20 +214,36 @@ const Marketplace = () => {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Message to Owner (Optional)</label>
-                <textarea rows="3" value={renterNotes} onChange={(e) => setRenterNotes(e.target.value)} placeholder="What kind of goods are you storing?" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>
+                <textarea rows="2" value={renterNotes} onChange={(e) => setRenterNotes(e.target.value)} placeholder="What kind of goods are you storing?" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>
               </div>
 
-              {/* Dynamic Price Calculator */}
-              <div className="bg-blue-50 p-4 rounded-xl mb-6 flex justify-between items-center border border-blue-100">
-                <div>
-                  <p className="text-sm font-medium text-blue-900">Total Estimated Cost</p>
-                  <p className="text-xs text-blue-700 mt-0.5">Based on ₹{selectedSpace.basePricePerDay}/day</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-700 flex items-center justify-end">
-                    <IndianRupee className="w-5 h-5 mr-0.5" />
+              {/* UPGRADED: The Offer Section */}
+              <div className="bg-gray-50 p-4 rounded-xl mb-6 border border-gray-200">
+                <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Calculated Total</p>
+                    <p className="text-xs text-gray-500 mt-0.5">₹{selectedSpace.basePricePerDay}/day</p>
+                  </div>
+                  <p className="text-lg font-medium text-gray-500 flex items-center">
+                    <IndianRupee className="w-4 h-4 mr-0.5" />
                     {calculateTotal().toLocaleString()}
                   </p>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-bold text-blue-900">Your Offer Price</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <IndianRupee className="w-4 h-4 text-blue-500" />
+                    </div>
+                    <input 
+                      type="number" 
+                      value={proposedPrice}
+                      onChange={(e) => setProposedPrice(e.target.value)}
+                      placeholder={calculateTotal().toString()}
+                      className="w-32 pl-8 pr-3 py-2 border-2 border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-bold text-blue-700 bg-white"
+                    />
+                  </div>
                 </div>
               </div>
 

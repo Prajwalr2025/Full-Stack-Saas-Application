@@ -13,7 +13,6 @@ const Dashboard = () => {
   const [squareFootage, setSquareFootage] = useState('');
   const [basePricePerDay, setBasePricePerDay] = useState('');
   
-  // NEW: State for our image uploading process
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
@@ -36,11 +35,10 @@ const Dashboard = () => {
     fetchSpaces();
   }, [token]);
 
-  // NEW: The function that handles the file selection and upload to AWS
   const uploadFileHandler = async (e) => {
     const file = e.target.files[0];
     const formData = new FormData();
-    formData.append('image', file); // 'image' matches exactly what Multer is looking for
+    formData.append('image', file); 
     setUploading(true);
 
     try {
@@ -50,7 +48,6 @@ const Dashboard = () => {
           Authorization: `Bearer ${token}`
         }
       });
-      // AWS successfully stored it, save the URL to our React state!
       setImageUrl(response.data.imageUrl);
       toast.success('Image uploaded successfully!');
     } catch (err) {
@@ -70,7 +67,7 @@ const Dashboard = () => {
           location,
           squareFootage: Number(squareFootage),
           basePricePerDay: Number(basePricePerDay),
-          imageUrl // Send the AWS URL to the database!
+          imageUrl 
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -78,7 +75,6 @@ const Dashboard = () => {
       setSpaces([response.data, ...spaces]);
       toast.success('Warehouse listed successfully!');
 
-      // Reset the form
       setTitle('');
       setLocation('');
       setSquareFootage('');
@@ -112,7 +108,6 @@ const Dashboard = () => {
           <h2 className="text-xl font-bold mb-4 text-gray-800">Create a New Listing</h2>
           <form onSubmit={handleCreateSpace} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            {/* NEW: Image Upload Section */}
             <div className="md:col-span-2 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-100 transition-colors">
               {imageUrl ? (
                 <div className="relative w-full h-48 rounded-lg overflow-hidden">
@@ -162,7 +157,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Grid of Owner's Properties */}
       {loading ? (
         <div className="text-gray-500 py-10">Loading your properties...</div>
       ) : spaces.length === 0 ? (
@@ -176,7 +170,6 @@ const Dashboard = () => {
           {spaces.map((space) => (
             <div key={space._id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
               
-              {/* NEW: Render the image! */}
               <div className="h-48 bg-gray-200 relative">
                 {space.imageUrl ? (
                   <img src={space.imageUrl} alt={space.title} className="w-full h-full object-cover" />
@@ -185,7 +178,13 @@ const Dashboard = () => {
                     <ImageIcon className="w-10 h-10" />
                   </div>
                 )}
-                <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow-sm">Active</span>
+                
+                {/* THE UPDATED DYNAMIC BADGE LOGIC */}
+                <span className={`absolute top-3 right-3 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm ${space.isActive === false ? 'bg-gray-600' : 'bg-green-500'}`}>
+                  {space.isActive === false ? 'Leased' : 'Active'}
+                </span>
+                {/* ----------------------------------- */}
+
               </div>
               
               <div className="p-5 flex-1 flex flex-col">
