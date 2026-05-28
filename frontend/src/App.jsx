@@ -7,7 +7,7 @@ import Layout from './components/Layout';
 import Marketplace from './pages/Marketplace';
 import Register from './pages/Register';
 import RenterApplications from './pages/RenterApplications';
-import OwnerRequests from './pages/OwnerRequests';
+import OwnerRequests from './pages/ownerRequests';
 import WarehouseDetails from './pages/warehouseDetails';
 
 function App() {
