@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, MapPin, Clock, IndianRupee, ArrowRightLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, MapPin, Clock, IndianRupee, ArrowRightLeft, CheckCircle, XCircle, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const RenterApplications = () => {
@@ -27,7 +27,6 @@ const RenterApplications = () => {
     }
   };
 
-  // NEW: Renters can now use the status update API too!
   const handleStatusUpdate = async (id, newStatus, newPrice = null) => {
     try {
       await axios.put(
@@ -44,8 +43,60 @@ const RenterApplications = () => {
     }
   };
 
+  // NEW: The Razorpay Checkout Integration
+  const handlePayment = async (req) => {
+    try {
+      // 1. Tell the backend to create an official Order ID
+      const orderRes = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/create-order`,
+        { requestId: req._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // 2. Configure the Razorpay popup window
+      const options = {
+        key: 'rzp_test_Suk2hWYVnbXvAQ', // IMPORTANT: Put a real test key here if you want the popup to render!
+        amount: orderRes.data.amount,
+        currency: orderRes.data.currency,
+        name: 'WareSaaS Platform',
+        description: `Lease payment for ${req.space?.title}`,
+        order_id: orderRes.data.id,
+        handler: async function (response) {
+          try {
+            // 3. When payment succeeds, tell the backend to verify and update the status to "Paid"
+            await axios.post(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/verify`,
+              {
+                requestId: req._id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            toast.success('Payment successful! Your lease is secured.');
+            fetchRequests(); 
+          } catch (err) {
+            toast.error('Payment verification failed');
+          }
+        },
+        theme: {
+          color: '#2563EB' // Matches our Tailwind blue-600
+        }
+      };
+
+      // 4. Open the window
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+    } catch (err) {
+      toast.error('Failed to initialize payment gateway. Check your console.');
+    }
+  };
+
   const getStatusColor = (status) => {
     switch(status) {
+      case 'Paid': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'Approved': return 'bg-green-100 text-green-800 border-green-200';
       case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
       case 'Negotiating': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -110,7 +161,7 @@ const RenterApplications = () => {
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-2 border-t border-gray-200 pt-2">
-                      <span className="text-sm font-bold text-gray-900">Current Offer</span>
+                      <span className="text-sm font-bold text-gray-900">Final Price</span>
                       <p className="text-xl font-bold text-blue-700 flex items-center justify-end">
                         <IndianRupee className="w-5 h-5 mr-0.5" />
                         {req.negotiatedPrice?.toLocaleString() || req.totalPrice?.toLocaleString() || 0}
@@ -119,10 +170,9 @@ const RenterApplications = () => {
                   </div>
                 </div>
 
-                {/* THE PING-PONG UI LOGIC */}
+                {/* THE ACTION BAR */}
                 {isActive && isMyTurn ? (
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                    
                     <div className="flex w-full sm:w-auto">
                       <input 
                         type="number" 
@@ -139,7 +189,6 @@ const RenterApplications = () => {
                         <ArrowRightLeft className="w-4 h-4" /> Counter
                       </button>
                     </div>
-
                     <div className="flex gap-2 w-full sm:w-auto">
                       <button 
                         onClick={() => handleStatusUpdate(req._id, 'Rejected')}
@@ -160,6 +209,29 @@ const RenterApplications = () => {
                     Waiting for the owner to review your request...
                   </div>
                 ) : null}
+
+                {/* THE PAYMENT BUTTON (Only shows if Approved!) */}
+                {req.status === 'Approved' && (
+                  <div className="px-6 py-4 bg-green-50 border-t border-green-100 flex justify-between items-center">
+                    <p className="text-green-800 font-medium text-sm flex items-center">
+                      <CheckCircle className="w-4 h-4 mr-2" /> Application Approved! Complete payment to secure your lease.
+                    </p>
+                    <button 
+                      onClick={() => handlePayment(req)}
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold transition-colors shadow-md"
+                    >
+                      <CreditCard className="w-5 h-5" /> Pay Now
+                    </button>
+                  </div>
+                )}
+                
+                {req.status === 'Paid' && (
+                  <div className="px-6 py-4 bg-purple-50 border-t border-purple-100 flex items-center justify-center">
+                    <p className="text-purple-800 font-bold flex items-center">
+                      <CheckCircle className="w-5 h-5 mr-2" /> Lease Secured & Paid
+                    </p>
+                  </div>
+                )}
 
               </div>
             );

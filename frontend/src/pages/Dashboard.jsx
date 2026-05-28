@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, X, MapPin, Maximize, Store, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, MapPin, Maximize, Store, UploadCloud, Image as ImageIcon, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
@@ -8,11 +8,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
+  // NEW: State to track if we are editing an existing space
+  const [editingId, setEditingId] = useState(null);
+
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [squareFootage, setSquareFootage] = useState('');
   const [basePricePerDay, setBasePricePerDay] = useState('');
-  
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
 
@@ -20,20 +22,22 @@ const Dashboard = () => {
   const userName = localStorage.getItem('userName');
 
   useEffect(() => {
-    const fetchSpaces = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setSpaces(response.data);
-      } catch (err) {
-        toast.error('Failed to load your dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSpaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const fetchSpaces = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSpaces(response.data);
+    } catch (err) {
+      toast.error('Failed to load your dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const uploadFileHandler = async (e) => {
     const file = e.target.files[0];
@@ -57,32 +61,66 @@ const Dashboard = () => {
     }
   };
 
-  const handleCreateSpace = async (e) => {
+  // NEW: Helper to reset the form completely
+  const resetForm = () => {
+    setTitle('');
+    setLocation('');
+    setSquareFootage('');
+    setBasePricePerDay('');
+    setImageUrl('');
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  // NEW: Triggers when the user clicks the "Edit" button on a card
+  const handleEditClick = (space) => {
+    setTitle(space.title);
+    setLocation(space.location);
+    setSquareFootage(space.squareFootage);
+    setBasePricePerDay(space.basePricePerDay);
+    setImageUrl(space.imageUrl || '');
+    setEditingId(space._id);
+    setShowForm(true);
+    
+    // Scroll to the top where the form is
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // UPGRADED: Handles both POST (Create) and PUT (Update)
+  const handleSubmitSpace = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces`,
-        {
-          title,
-          location,
-          squareFootage: Number(squareFootage),
-          basePricePerDay: Number(basePricePerDay),
-          imageUrl 
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const spaceData = {
+        title,
+        location,
+        squareFootage: Number(squareFootage),
+        basePricePerDay: Number(basePricePerDay),
+        imageUrl 
+      };
 
-      setSpaces([response.data, ...spaces]);
-      toast.success('Warehouse listed successfully!');
+      if (editingId) {
+        // UPDATE MODE
+        await axios.put(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces/${editingId}`,
+          spaceData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success('Warehouse updated successfully!');
+      } else {
+        // CREATE MODE
+        await axios.post(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces`,
+          spaceData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success('Warehouse listed successfully!');
+      }
 
-      setTitle('');
-      setLocation('');
-      setSquareFootage('');
-      setBasePricePerDay('');
-      setImageUrl('');
-      setShowForm(false);
+      fetchSpaces(); // Refresh the grid to show new data
+      resetForm();   // Clear everything out
+      
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create listing');
+      toast.error(err.response?.data?.message || 'Failed to save listing');
     }
   };
 
@@ -95,18 +133,28 @@ const Dashboard = () => {
           <p className="text-gray-500 mt-1">Manage your warehouse listings and revenue.</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              resetForm(); // If closing the form, wipe the data
+            } else {
+              setShowForm(true);
+            }
+          }}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
         >
           {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-          {showForm ? 'Cancel Listing' : 'Add New Space'}
+          {showForm ? 'Cancel' : 'Add New Space'}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8 animate-in slide-in-from-top-4 fade-in duration-200">
-          <h2 className="text-xl font-bold mb-4 text-gray-800">Create a New Listing</h2>
-          <form onSubmit={handleCreateSpace} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Dynamic Header */}
+          <h2 className="text-xl font-bold mb-4 text-gray-800">
+            {editingId ? 'Edit Warehouse Details' : 'Create a New Listing'}
+          </h2>
+          
+          <form onSubmit={handleSubmitSpace} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             <div className="md:col-span-2 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-100 transition-colors">
               {imageUrl ? (
@@ -149,8 +197,9 @@ const Dashboard = () => {
             </div>
 
             <div className="md:col-span-2 pt-2">
-              <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors">
-                Publish Listing
+              {/* Dynamic Submit Button */}
+              <button type="submit" className={`w-full text-white font-bold py-3 rounded-lg transition-colors ${editingId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'}`}>
+                {editingId ? 'Save Changes' : 'Publish Listing'}
               </button>
             </div>
           </form>
@@ -179,12 +228,18 @@ const Dashboard = () => {
                   </div>
                 )}
                 
-                {/* THE UPDATED DYNAMIC BADGE LOGIC */}
                 <span className={`absolute top-3 right-3 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm ${space.isActive === false ? 'bg-gray-600' : 'bg-green-500'}`}>
                   {space.isActive === false ? 'Leased' : 'Active'}
                 </span>
-                {/* ----------------------------------- */}
 
+                {/* NEW: The Edit Button overlay */}
+                <button 
+                  onClick={() => handleEditClick(space)}
+                  className="absolute top-3 left-3 bg-white/90 hover:bg-white text-gray-800 p-2 rounded-full shadow-sm backdrop-blur-sm transition-colors"
+                  title="Edit Listing"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
               </div>
               
               <div className="p-5 flex-1 flex flex-col">

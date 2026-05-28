@@ -8,6 +8,7 @@ import Marketplace from './pages/Marketplace';
 import Register from './pages/Register';
 import RenterApplications from './pages/RenterApplications';
 import OwnerRequests from './pages/OwnerRequests';
+import WarehouseDetails from './pages/warehouseDetails';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/applications" element={<RenterApplications />} />
           <Route path="/requests" element={<OwnerRequests />} />
+          <Route path="/warehouse/:id" element={<WarehouseDetails />} />
           
           <Route 
             path="/dashboard" 
