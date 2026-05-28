@@ -6,8 +6,8 @@ import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Marketplace from './pages/Marketplace';
 import Register from './pages/Register';
-import RenterApplications from './pages/renterApplications';
-import OwnerRequests from './pages/ownerRequests';
+import RenterApplications from './pages/RenterApplications';
+import OwnerRequests from './pages/OwnerRequests';
 import WarehouseDetails from './pages/warehouseDetails';
 
 function App() {
