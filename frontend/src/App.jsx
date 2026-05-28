@@ -25,7 +25,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/applications" element={<RenterApplications />} />
-          <Route path="/requests" element={<ownerRequests />} />
+          <Route path="/requests" element={<OwnerRequests />} />
           <Route path="/warehouse/:id" element={<WarehouseDetails />} />
           
           <Route 
