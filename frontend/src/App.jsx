@@ -6,7 +6,7 @@ import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 import Marketplace from './pages/Marketplace';
 import Register from './pages/Register';
-import RenterApplications from './pages/RenterApplications';
+import RenterApplications from './pages/renterApplications';
 import OwnerRequests from './pages/ownerRequests';
 import WarehouseDetails from './pages/warehouseDetails';
 
