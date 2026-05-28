@@ -59,9 +59,61 @@ const getOwnerSpaces = async (req, res) => {
   }
 };
 
+// @desc    Update a warehouse listing
+// @route   PUT /api/spaces/:id
+// @access  Private (Owner only)
+const updateSpace = async (req, res) => {
+  try {
+    const space = await Space.findById(req.params.id);
+
+    if (!space) {
+      return res.status(404).json({ message: 'Warehouse not found' });
+    }
+
+    // Security Check: Ensure the logged-in user actually owns this specific warehouse
+    if (space.user.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to edit this listing' });
+    }
+
+    // Update the document and return the new version
+    const updatedSpace = await Space.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true } 
+    );
+
+    res.status(200).json(updatedSpace);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update warehouse details' });
+  }
+};
+
+// @desc    Get a single warehouse by its ID
+// @route   GET /api/spaces/:id
+// @access  Public
+const getSpaceById = async (req, res) => {
+  try {
+    const space = await Space.findById(req.params.id);
+
+    if (!space) {
+      return res.status(404).json({ message: 'Warehouse not found' });
+    }
+
+    res.status(200).json(space);
+  } catch (error) {
+    // If the ID is completely malformed, Mongoose throws a CastError
+    if (error.name === 'CastError') {
+      return res.status(404).json({ message: 'Invalid warehouse ID format' });
+    }
+    res.status(500).json({ message: 'Failed to fetch warehouse details' });
+  }
+};
+
 // Export the functions so our routes can use them
 module.exports = {
   createSpace,
   getSpaces,
-  getOwnerSpaces
+  getOwnerSpaces,
+  updateSpace,
+  getSpaceById
 };

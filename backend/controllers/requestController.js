@@ -4,8 +4,10 @@ const Space = require('../models/Space');
 // @desc    Renter applies for a space
 // @route   POST /api/requests
 // @access  Private (Renters only)
+// @desc    Renter applies for a space
+// @route   POST /api/requests
+// @access  Private (Renters only)
 const createRequest = async (req, res) => {
-  // We now accept a 'proposedPrice' from the frontend
   const { spaceId, startDate, endDate, totalPrice, proposedPrice, renterNotes } = req.body;
 
   try {
@@ -18,17 +20,19 @@ const createRequest = async (req, res) => {
     const request = await Request.create({
       space: spaceId,
       renter: req.user.id,
-      owner: space.user, 
+      owner: space.owner || space.user,
       startDate,
       endDate,
-      totalPrice, // The mathematical original price
-      negotiatedPrice: proposedPrice || totalPrice, // The Renter's opening bid
+      totalPrice, 
+      negotiatedPrice: proposedPrice || totalPrice, 
       actionRequiredBy: 'owner', 
       renterNotes
     });
 
     res.status(201).json(request);
   } catch (error) {
+    // NEW: This will print the EXACT reason it crashed to your terminal!
+    console.error("DEBUG - Create Request Error:", error); 
     res.status(500).json({ message: 'Failed to submit lease request' });
   }
 };

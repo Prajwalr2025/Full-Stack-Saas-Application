@@ -29,6 +29,8 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/spaces', spaceRoutes);
 
 app.use('/api/requests', require('./routes/requestRoutes'));
+
+app.use('/api/payments', require('./routes/paymentRoutes'));
 // Define the port (use the one from .env, or default to 5000)
 const PORT = process.env.PORT || 5000;
 
