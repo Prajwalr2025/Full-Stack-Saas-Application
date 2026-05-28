@@ -1,176 +1,185 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { MapPin, Maximize, ShieldCheck, Calendar, IndianRupee, ArrowLeft, Info } from 'lucide-react';
+import { Calendar, User, Mail, IndianRupee, MessageSquare, CheckCircle, XCircle, Inbox, ArrowRightLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const WarehouseDetails = () => {
-  const { id } = useParams(); // Grabs the warehouse ID from the URL
-  const navigate = useNavigate();
-  
-  const [space, setSpace] = useState(null);
+const OwnerRequests = () => {
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Booking Form State
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [proposedPrice, setProposedPrice] = useState('');
-  const [renterNotes, setRenterNotes] = useState('');
-
+  
+  // Tracks the counter-offer prices typed into the input fields
+  const [counterPrices, setCounterPrices] = useState({});
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    const fetchSpace = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/spaces/${id}`);
-        setSpace(response.data);
-      } catch (err) {
-        toast.error('Failed to load warehouse details');
-        navigate('/marketplace');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSpace();
-  }, [id, navigate]);
+    fetchRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const calculateTotal = () => {
-    if (!startDate || !endDate || !space) return 0;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    return days > 0 ? days * space.basePricePerDay : 0;
+  const fetchRequests = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/requests/owner`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRequests(response.data);
+    } catch (err) {
+      toast.error('Failed to load incoming requests');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLeaseSubmit = async (e) => {
-    e.preventDefault();
-    if (!token) {
-      toast.error('You must be logged in to request a space!');
-      return navigate('/login');
-    }
-
-    const totalPrice = calculateTotal();
-    if (totalPrice <= 0) {
-      return toast.error('Please select valid dates.');
-    }
-
-    const finalOfferPrice = proposedPrice ? Number(proposedPrice) : totalPrice;
-
+  const handleStatusUpdate = async (id, newStatus, newPrice = null) => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/requests`,
-        { spaceId: space._id, startDate, endDate, totalPrice, proposedPrice: finalOfferPrice, renterNotes },
+      await axios.put(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/requests/${id}/status`,
+        { status: newStatus, newPrice: Number(newPrice) },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      toast.success('Lease request sent to the owner!');
-      navigate('/applications'); // Redirect them to track their application
+      
+      toast.success(newStatus === 'Negotiating' ? 'Counter-offer sent!' : `Request ${newStatus.toLowerCase()}!`);
+      
+      setCounterPrices({ ...counterPrices, [id]: '' });
+      fetchRequests(); 
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to submit request');
+      toast.error(err.response?.data?.message || 'Failed to update request');
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading details...</div>;
-  if (!space) return null;
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'Approved': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Rejected': return 'bg-red-100 text-red-800 border-red-200';
+      case 'Negotiating': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default: return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-16">
-      
-      {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-gray-200 px-8 py-4">
-        <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 hover:text-blue-600 font-medium transition-colors">
-          <ArrowLeft className="w-5 h-5 mr-2" /> Back to Marketplace
-        </button>
-      </div>
+    <div className="p-8 max-w-5xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">Incoming Requests</h1>
+      <p className="text-gray-500 mb-8">Review, negotiate, and manage lease applications.</p>
 
-      <div className="max-w-6xl mx-auto px-6 mt-8">
-        
-        {/* Massive Hero Image */}
-        <div className="w-full h-[60vh] bg-gray-200 rounded-2xl overflow-hidden mb-8 shadow-sm relative">
-          {space.imageUrl ? (
-            <img src={space.imageUrl} alt={space.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">No Image Available</div>
-          )}
-          <span className={`absolute top-6 left-6 text-white text-sm font-bold px-4 py-2 rounded-full shadow-md ${space.isActive !== false ? 'bg-green-500' : 'bg-gray-800'}`}>
-            {space.isActive !== false ? 'Available Now' : 'Currently Leased'}
-          </span>
+      {loading ? (
+        <div className="text-gray-500 py-10">Loading requests...</div>
+      ) : requests.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+          <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900">Your inbox is empty</h3>
+          <p className="text-gray-500 mt-1">When renters apply for your warehouses, they will appear here.</p>
         </div>
+      ) : (
+        <div className="space-y-6">
+          {requests.map((req) => {
+            // THE STATE MACHINE LOGIC
+            const isActive = req.status === 'Pending' || req.status === 'Negotiating';
+            const isMyTurn = req.actionRequiredBy === 'owner';
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          
-          {/* Left Column: Warehouse Information */}
-          <div className="lg:col-span-2 space-y-8">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">{space.title}</h1>
-              <div className="flex flex-wrap items-center gap-6 text-gray-600">
-                <div className="flex items-center"><MapPin className="w-5 h-5 mr-2 text-blue-600" /> {space.location}</div>
-                <div className="flex items-center"><Maximize className="w-5 h-5 mr-2 text-blue-600" /> {space.squareFootage.toLocaleString()} sq ft</div>
-                <div className="flex items-center"><ShieldCheck className="w-5 h-5 mr-2 text-green-600" /> Verified Owner</div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-200 pt-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">About this property</h2>
-              <p className="text-gray-600 leading-relaxed text-lg">
-                This premium industrial space in {space.location} offers {space.squareFootage.toLocaleString()} square feet of highly optimized storage capacity. Perfect for logistics, distribution, or manufacturing operations. The property is managed by a verified owner, ensuring a smooth and professional leasing experience.
-              </p>
-            </div>
-          </div>
-
-          {/* Right Column: The Booking Widget */}
-          <div>
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xl sticky top-8">
-              <div className="mb-6 pb-6 border-b border-gray-100">
-                <p className="text-3xl font-bold text-gray-900 flex items-center">
-                  <IndianRupee className="w-7 h-7 mr-1" />
-                  {space.basePricePerDay.toLocaleString()} <span className="text-lg text-gray-500 font-normal ml-1">/ day</span>
-                </p>
-              </div>
-
-              {space.isActive !== false ? (
-                <form onSubmit={handleLeaseSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Check-in</label>
-                      <input type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Check-out</label>
-                      <input type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} min={startDate || new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black" />
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mt-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600 underline">Base Total</span>
-                      <span className="font-medium flex items-center"><IndianRupee className="w-4 h-4" />{calculateTotal().toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                      <label className="text-sm font-bold text-gray-900">Your Offer</label>
-                      <input type="number" value={proposedPrice} onChange={(e) => setProposedPrice(e.target.value)} placeholder={calculateTotal().toString()} className="w-28 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-black outline-none font-bold text-right" />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg transition-colors mt-2">
-                    Request to Book
-                  </button>
-                  <p className="text-center text-xs text-gray-500 mt-3 flex items-center justify-center">
-                    <Info className="w-3 h-3 mr-1" /> You won't be charged yet
-                  </p>
-                </form>
-              ) : (
-                <div className="bg-gray-100 p-6 rounded-xl text-center text-gray-600 font-medium">
-                  This property is currently unavailable for new leases.
+            return (
+              <div key={req._id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-gray-900">{req.space?.title || 'Deleted Property'}</h3>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${getStatusColor(req.status)}`}>
+                    {req.status}
+                  </span>
                 </div>
-              )}
-            </div>
-          </div>
 
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Applicant Info</h4>
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <User className="w-5 h-5 text-gray-400" />
+                      <span className="font-medium">{req.renter?.name || 'Unknown User'}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Mail className="w-5 h-5 text-gray-400" />
+                      <span>{req.renter?.email || 'No email provided'}</span>
+                    </div>
+                    {req.renterNotes && (
+                      <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-2 text-blue-800">
+                        <MessageSquare className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm italic">"{req.renterNotes}"</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Lease Details</h4>
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <Calendar className="w-5 h-5 text-gray-400" />
+                      <span>{new Date(req.startDate).toLocaleDateString()} to {new Date(req.endDate).toLocaleDateString()}</span>
+                    </div>
+                    
+                    {/* The Negotiated Price Block */}
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mt-2">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-gray-500">Original Price:</span>
+                        <span className="text-sm text-gray-500 line-through flex items-center">
+                          <IndianRupee className="w-3 h-3" /> {req.totalPrice?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-gray-900">Current Offer:</span>
+                        <span className="text-xl font-bold text-blue-700 flex items-center">
+                          <IndianRupee className="w-5 h-5 mr-0.5" /> 
+                          {req.negotiatedPrice?.toLocaleString() || req.totalPrice?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* THE PING-PONG UI LOGIC */}
+                {isActive && isMyTurn ? (
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    
+                    {/* The Counter Offer Input */}
+                    <div className="flex w-full sm:w-auto">
+                      <input 
+                        type="number" 
+                        placeholder="Counter offer..." 
+                        value={counterPrices[req._id] || ''}
+                        onChange={(e) => setCounterPrices({...counterPrices, [req._id]: e.target.value})}
+                        className="px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-32"
+                      />
+                      <button 
+                        onClick={() => handleStatusUpdate(req._id, 'Negotiating', counterPrices[req._id])}
+                        disabled={!counterPrices[req._id]}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-r-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-1"
+                      >
+                        <ArrowRightLeft className="w-4 h-4" /> Counter
+                      </button>
+                    </div>
+
+                    {/* Accept / Reject Buttons */}
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button 
+                        onClick={() => handleStatusUpdate(req._id, 'Rejected')}
+                        className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" /> Reject
+                      </button>
+                      <button 
+                        onClick={() => handleStatusUpdate(req._id, 'Approved')}
+                        className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors shadow-sm"
+                      >
+                        <CheckCircle className="w-4 h-4" /> Accept Offer
+                      </button>
+                    </div>
+                  </div>
+                ) : isActive && !isMyTurn ? (
+                  <div className="px-6 py-4 bg-yellow-50 border-t border-yellow-100 text-yellow-800 text-center font-medium text-sm">
+                    Waiting for renter to review your counter-offer...
+                  </div>
+                ) : null}
+
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default WarehouseDetails;
+export default OwnerRequests;
